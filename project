@@ -1,1 +1,70 @@
+pragma solidity ^0.8.0;
 
+contract WeaponProduction {
+
+    struct Weapon {
+        uint256 id;
+        string manufacturer;
+        string model;
+        string serialNumber;
+        uint256 productionDate;
+        bool isSold;
+        address seller;
+        address buyer;
+    }
+
+    struct License {
+        uint256 id;
+        string licenseNumber;
+        string issuingAuthority;
+        address owner;
+    }
+
+    mapping (uint256 => Weapon) public weapons;
+    mapping (uint256 => License) public licenses;
+    uint256 public weaponCount;
+    uint256 public licenseCount;
+
+    event WeaponProduced(uint256 id, string manufacturer, string model, string serialNumber, uint256 productionDate, address seller);
+    event WeaponSold(uint256 id, address seller, address buyer);
+    event LicenseIssued(uint256 id, string licenseNumber, string issuingAuthority, address owner);
+
+    function produceWeapon(string memory _manufacturer, string memory _model, string memory _serialNumber, uint256 _productionDate) public returns (uint256) {
+        require(bytes(_manufacturer).length > 0, "Manufacturer is required.");
+        require(bytes(_model).length > 0, "Model is required.");
+        require(bytes(_serialNumber).length > 0, "Serial number is required.");
+        require(_productionDate > 0, "Production date is required.");
+
+        weaponCount++;
+        weapons[weaponCount] = Weapon(weaponCount, _manufacturer, _model, _serialNumber, _productionDate, false, msg.sender, address(0));
+        emit WeaponProduced(weaponCount, _manufacturer, _model, _serialNumber, _productionDate, msg.sender);
+
+        return weaponCount;
+    }
+
+    function sellWeapon(uint256 _id, address _buyer) public {
+        require(_id > 0 && _id <= weaponCount, "Invalid weapon ID.");
+        require(!weapons[_id].isSold, "Weapon already sold.");
+        require(weapons[_id].seller == msg.sender, "Only the seller can sell the weapon.");
+
+        weapons[_id].isSold = true;
+        weapons[_id].buyer = _buyer;
+        emit WeaponSold(_id, msg.sender, _buyer);
+    }
+
+    function issueLicense(string memory _licenseNumber, string memory _issuingAuthority, address _owner) public returns (uint256) {
+        require(bytes(_licenseNumber).length > 0, "License number is required.");
+        require(bytes(_issuingAuthority).length > 0, "Issuing authority is required.");
+
+        licenseCount++;
+        licenses[licenseCount] = License(licenseCount, _licenseNumber, _issuingAuthority, _owner);
+        emit LicenseIssued(licenseCount, _licenseNumber, _issuingAuthority, _owner);
+
+        return licenseCount;
+    }
+
+    function verifyLicense(uint256 _id) public view returns (bool) {
+        require(_id > 0 && _id <= licenseCount, "Invalid license ID.");
+        return (msg.sender == licenses[_id].owner);  
+    }
+}
